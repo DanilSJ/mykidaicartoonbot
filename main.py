@@ -2,7 +2,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from app import start_router, video_router
+from app import start_router, video_router, payment_router
 from core.config import settings
 
 
@@ -12,7 +12,7 @@ async def main():
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher()
-    dp.include_routers(start_router, video_router)
+    dp.include_routers(start_router, video_router, payment_router)
     await dp.start_polling(bot)
 
 
