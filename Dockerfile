@@ -10,4 +10,4 @@ ENV UV_NO_DEV=1
 WORKDIR /app
 RUN uv sync --locked
 
-CMD ["uv", "run", "main"]
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run main"]
