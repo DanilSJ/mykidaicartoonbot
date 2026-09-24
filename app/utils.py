@@ -10,7 +10,7 @@ async def get_user(
     telegram_id: int,
     username: str | None = None,
 ) -> Any:
-    query = select(User.id, User.username, User.request_count).where(User.telegram_id == telegram_id)
+    query = select(User).where(User.telegram_id == telegram_id)
     result = await session.execute(query)
     user = result.scalar_one_or_none()
 
