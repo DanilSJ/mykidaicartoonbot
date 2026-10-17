@@ -163,7 +163,7 @@ async def create_video(
 
         if status in {"FAILED", "ERROR", "CANCELLED"}:
             raise RuntimeError(
-                f"Генерация видео завершилась ошибкой: {data}"
+                f"Генерация видео завершилась ошибкой возможно изображение слишком маленькое минимальный размер 256x256"
             )
 
         await asyncio.sleep(10)

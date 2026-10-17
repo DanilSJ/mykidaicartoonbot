@@ -46,7 +46,7 @@ async def state_video_image(message: Message, state: FSMContext):
     photo = message.photo[-1]
     await state.update_data(image_file_id=photo.file_id)
     await state.set_state(Video.duration)
-    return await message.answer("Напишите какая должна быть длительность видео в секундах 5 или 15", reply_markup=duration_keyboard())
+    return await message.answer("Выберите длительность видео: 5 или 15 секунд👾", reply_markup=duration_keyboard())
 
 
 @router.message(Video.duration, F.text)
@@ -54,15 +54,15 @@ async def state_video_duration(message: Message, state: FSMContext):
     try:
         duration = int(message.text.strip())
     except ValueError:
-        return await message.answer("Пожалуйста, отправьте число 5 или 15")
+        return await message.answer("Выберите длительность видео: 5 или 15 секунд👾")
 
     if duration not in (5, 15):
-        return await message.answer("Длительность должна быть 5 или 15 секунд")
+        return await message.answer("Выберите длительность видео: 5 или 15 секунд👾")
 
     data = await state.get_data()
     await state.clear()
 
-    await message.answer("Ваше видео началось создаваться ⏳")
+    await message.answer("Видео будет генерироваться около 3-5 минут, пожалуйста, подождите 🪄")
 
     asyncio.create_task(
         _generate_and_send(
