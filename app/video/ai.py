@@ -4,6 +4,7 @@ import time
 from io import BytesIO
 import requests
 
+from app.video.prompt import prompt_second_15, prompt_second_5
 from core.config import settings
 
 API_URL = "https://api.magnific.com/v1/ai/video/minimax-h3-768p"
@@ -32,12 +33,16 @@ def _get_image_mime(image_bytes: bytes) -> str:
 
 
 def _create_video_task(
-    prompt: str,
     image_bytes: bytes,
     duration: int,
 ) -> str:
     """Создаёт задачу генерации видео в Magnific AI."""
     image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+
+    prompt = prompt_second_5
+
+    if duration == 15:
+        prompt = prompt_second_15
 
     payload = {
         "prompt": f"{prompt}. Убери белую сетку на изображении",
@@ -89,7 +94,6 @@ def _get_video_task(task_id: str) -> dict:
 
 
 async def create_video(
-    prompt: str,
     image: BytesIO,
     duration: int = 5,
     audio: bool = False,
@@ -98,7 +102,6 @@ async def create_video(
     Асинхронно создаёт видео через Magnific AI
     и возвращает ссылку на готовый файл.
 
-    :param prompt: текстовый сценарий видео
     :param image: BytesIO с изображением JPEG, PNG или WEBP
     :param duration: длительность видео в секундах
     :param audio: оставлен для совместимости; API-пример
@@ -119,7 +122,6 @@ async def create_video(
     # Создание задачи не блокирует event loop.
     task_id = await asyncio.to_thread(
         _create_video_task,
-        prompt,
         image_bytes,
         duration,
     )
