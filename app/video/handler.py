@@ -62,7 +62,7 @@ async def state_video_duration(message: Message, state: FSMContext):
     data = await state.get_data()
     await state.clear()
 
-    await message.answer("Видео будет генерироваться около 3-5 минут, пожалуйста, подождите 🪄")
+    await message.answer("Генерация видео займет от 3 до 5 минут, пожалуйста, подождите 🪄")
 
     asyncio.create_task(
         _generate_and_send(
