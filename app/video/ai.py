@@ -1,67 +1,172 @@
 import asyncio
+import base64
 import time
 from io import BytesIO
-from arkruntime import AsyncArk
+import requests
 
-from app.video.image import _to_data_uri
 from core.config import settings
 
-client = AsyncArk(
-    base_url="https://ark.ap-southeast.bytepluses.com/api/v3",
-    api_key=settings.AI_API_KEY,
-)
+API_URL = "https://api.magnific.com/v1/ai/video/minimax-h3-768p"
+
+HEADERS = {
+    "x-magnific-api-key": settings.AI_API_KEY,
+    "Content-Type": "application/json",
+}
 
 
-async def create_video(prompt: str, image: BytesIO, duration: int = 4, audio: bool = False) -> str:
+def _get_image_mime(image_bytes: bytes) -> str:
+    """Определяет MIME-тип изображения по сигнатуре файла."""
+    if image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+
+    if image_bytes.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+
+    if (
+        image_bytes.startswith(b"RIFF")
+        and image_bytes[8:12] == b"WEBP"
+    ):
+        return "image/webp"
+
+    raise ValueError("Неподдерживаемый формат изображения")
+
+
+def _create_video_task(
+    prompt: str,
+    image_bytes: bytes,
+    duration: int,
+) -> str:
+    """Создаёт задачу генерации видео в Magnific AI."""
+    image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+
+    payload = {
+        "prompt": f"{prompt}. Убери белую сетку на изображении",
+        "image": image_base64,
+        "duration": duration,
+        "aspect_ratio": "adaptive",
+        "aigc_watermark": False,
+    }
+
+    response = requests.post(
+        API_URL,
+        json=payload,
+        headers=HEADERS,
+        timeout=60,
+    )
+    response.json()
+
+    result = response.json()
+    data = result.get("data", {})
+
+    task_id = data.get("task_id")
+
+    if not task_id:
+        raise RuntimeError(
+            f"Magnific не вернул task_id: {result}"
+        )
+
+    return task_id
+
+
+def _get_video_task(task_id: str) -> dict:
+    """Получает состояние задачи генерации видео."""
+    response = requests.get(
+        f"{API_URL}/{task_id}",
+        headers=HEADERS,
+        timeout=30,
+    )
+    response.raise_for_status()
+
+    result = response.json()
+    data = result.get("data", {})
+
+    if not data:
+        raise RuntimeError(
+            f"Некорректный ответ Magnific: {result}"
+        )
+
+    return data
+
+
+async def create_video(
+    prompt: str,
+    image: BytesIO,
+    duration: int = 5,
+    audio: bool = False,
+) -> str:
     """
-    Асинхронно создаёт видео и возвращает ссылку на готовый файл.
+    Асинхронно создаёт видео через Magnific AI
+    и возвращает ссылку на готовый файл.
 
-    :param prompt: текстовый сценарий
-    :param image: BytesIO с изображением (jpeg/png/webp)
-    :param duration: длительность в секундах
-    :param audio: генерация аудио
+    :param prompt: текстовый сценарий видео
+    :param image: BytesIO с изображением JPEG, PNG или WEBP
+    :param duration: длительность видео в секундах
+    :param audio: оставлен для совместимости; API-пример
+                  Magnific не содержит параметра генерации аудио
+    :return: URL готового видео
     """
+    if duration <= 0:
+        raise ValueError("Длительность видео должна быть положительной")
+
     image.seek(0)
     image_bytes = image.read()
 
-    if image_bytes.startswith(b"\x89PNG"):
-        mime = "image/png"
-    elif image_bytes[:3] == b"RIFF" and image_bytes[8:12] == b"WEBP":
-        mime = "image/webp"
-    else:
-        mime = "image/jpeg"
+    if not image_bytes:
+        raise ValueError("Передано пустое изображение")
 
-    data_uri = _to_data_uri(image_bytes, mime=mime)
+    _get_image_mime(image_bytes)
 
-    create_result = await client.content_generation.tasks.create(
-        model="dreamina-seedance-2-5-260628",
-        content=[
-            {"type": "text", "text": f"{prompt}. Убери белую сетку на изображении"},
-            {
-                "type": "image_url",
-                "image_url": {"url": data_uri},
-                "role": "reference_image",
-            },
-        ],
-        generate_audio=audio,
-        ratio="16:9",
-        duration=duration,
-        extra_body={
-            "omni_reference_task_type": "reference",
-            "output_format": "mp4",
-        },
+    # Создание задачи не блокирует event loop.
+    task_id = await asyncio.to_thread(
+        _create_video_task,
+        prompt,
+        image_bytes,
+        duration,
     )
-    task_id = create_result.id
 
     deadline = time.monotonic() + 30 * 60
+
     while time.monotonic() < deadline:
-        get_result = await client.content_generation.tasks.get(task_id=task_id)
-        status = get_result.status
-        if status == "succeeded":
-            return get_result.content.video_url
-        elif status == "failed":
-            raise RuntimeError(f"Video generation task failed: {get_result.error}")
+        data = await asyncio.to_thread(
+            _get_video_task,
+            task_id,
+        )
+
+        status = str(data.get("status", "")).upper()
+
+        if status in {"SUCCEEDED", "SUCCESS", "COMPLETED"}:
+            generated = data.get("generated") or []
+
+            # Проверяем возможные форматы ответа API.
+            for item in generated:
+                if isinstance(item, str) and item.startswith("http"):
+                    return item
+
+                if isinstance(item, dict):
+                    url = (
+                        item.get("url")
+                        or item.get("video_url")
+                        or item.get("download_url")
+                    )
+                    if url:
+                        return url
+
+            for key in ("video_url", "url", "result_url"):
+                if data.get(key):
+                    return data[key]
+
+            raise RuntimeError(
+                f"Видео готово, но ссылка отсутствует: {data}"
+            )
+
+        if status in {"FAILED", "ERROR", "CANCELLED"}:
+            raise RuntimeError(
+                f"Генерация видео завершилась ошибкой: {data}"
+            )
 
         await asyncio.sleep(10)
 
-    raise TimeoutError("Task did not finish in 30 minutes")
+    raise TimeoutError(
+        f"Magnific не завершил генерацию за 30 минут. "
+        f"Task ID: {task_id}"
+    )
