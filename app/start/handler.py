@@ -1,7 +1,8 @@
 from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
 
+from app.start.keyboard import start_keyboard
 from app.utils import get_user
 from core.models import db_helper
 
@@ -11,20 +12,17 @@ router = Router()
 async def cmd_start(message: Message):
     async with db_helper.scoped_session_dependency() as session:
         await get_user(session, message.from_user.id, message.from_user.username)
+        video = FSInputFile("media/start.MOV")
+        return await message.answer_video(video=video, caption="""🎬 Добро пожаловать в Kidai!
 
-        text = (
-            "🎬 <b>Добро пожаловать в KidaiCartoon</b>\n\n"
-            "✨ <b>Оживи свои идеи</b> — превращай статичные изображения "
-            "в впечатляющие видеоролики за считанные секунды!\n\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "🚀 <b>Что я умею:</b>\n\n"
-            "🖼 <b>Генерация видео</b> — превращаю любую картинку в живое видео\n"
-            "🎨 <b>Качественный результат</b> — современные AI-технологии\n"
-            "⚡ <b>Быстро и просто</b> — загрузи фото и получи видео\n"
-            "💾 <b>Удобно</b> — скачивай результат в один клик\n"
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-            "📌 <b>Как начать:</b>\n"
-            "Напишите /video"
-        )
+Представь: ты нарисовал героя, а он вдруг ожил! ✨
 
-        return await message.answer(text, parse_mode="HTML")
+Теперь ты можешь сам создавать мультфильмы из своих картинок.
+
+🎨 Загрузи рисунок.
+
+🎥 Запусти волшебство.
+
+🌈 Получи собственное видео.
+
+👇 Начни своё приключение!""", parse_mode="HTML", reply_markup=start_keyboard())
