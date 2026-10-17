@@ -8,6 +8,7 @@ def start_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text="Создать видео",
                     callback_data=f"create_video",
+                    style="success"
                 )
             ],
         ]
