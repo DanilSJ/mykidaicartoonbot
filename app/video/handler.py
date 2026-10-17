@@ -2,11 +2,12 @@ import asyncio
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, BufferedInputFile
+from aiogram.types import Message, BufferedInputFile, CallbackQuery
 from app.payment.keyboard import buy_keyboard
 from app.utils import get_user
 from app.video.ai import create_video
 from app.video.image import add_grid
+from app.video.keyboard import duration_keyboard
 from app.video.state import Video
 from io import BytesIO
 import httpx
@@ -27,35 +28,25 @@ async def cmd_video(message: Message, state: FSMContext):
     await state.set_state(Video.image)
     return await message.answer("Для того чтобы сгенерировать видео пришлите ОДНО изображение по которому будет происходить генерация")
 
+@router.callback_query(F.data == "create_video")
+async def callback_video(callback: CallbackQuery, state: FSMContext):
+    async with db_helper.scoped_session_dependency() as session:
+        user = await get_user(session, callback.from_user.id, callback.from_user.username)
+
+        if user.request_count <= 0:
+            return await callback.message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
+                                        reply_markup=buy_keyboard(),
+                                        )
+    await state.set_state(Video.image)
+    return await callback.message.answer("Для того чтобы сгенерировать видео пришлите ОДНО изображение по которому будет происходить генерация")
+
 
 @router.message(Video.image, F.photo)
 async def state_video_image(message: Message, state: FSMContext):
     photo = message.photo[-1]
     await state.update_data(image_file_id=photo.file_id)
-    await state.set_state(Video.prompt)
-    return await message.answer("Напишите сценарий по которому должно создаться видео")
-
-
-@router.message(Video.prompt, F.text)
-async def state_video_prompt(message: Message, state: FSMContext):
-    await state.update_data(prompt=message.text)
-    await state.set_state(Video.audio)
-    return await message.answer(
-        "Создавать звук для видео? Напишите Да или Нет"
-    )
-@router.message(Video.audio, F.text)
-async def state_video_prompt(message: Message, state: FSMContext):
-    msg = message.text.lower()
-
-    if msg == "да":
-        await state.update_data(audio=True)
-    else:
-        await state.update_data(audio=False)
-
     await state.set_state(Video.duration)
-    return await message.answer(
-        "Напишите какая должна быть длительность видео в секундах от 4 до 30"
-    )
+    return await message.answer("Напишите какая должна быть длительность видео в секундах 5 или 15", reply_markup=duration_keyboard())
 
 
 @router.message(Video.duration, F.text)
@@ -63,10 +54,10 @@ async def state_video_duration(message: Message, state: FSMContext):
     try:
         duration = int(message.text.strip())
     except ValueError:
-        return await message.answer("Пожалуйста, отправьте число от 4 до 30")
+        return await message.answer("Пожалуйста, отправьте число 5 или 15")
 
-    if not 4 <= duration <= 30:
-        return await message.answer("Длительность должна быть от 4 до 30 секунд")
+    if duration not in (5, 15):
+        return await message.answer("Длительность должна быть 5 или 15 секунд")
 
     data = await state.get_data()
     await state.clear()
@@ -78,26 +69,24 @@ async def state_video_duration(message: Message, state: FSMContext):
             bot=message.bot,
             chat_id=message.chat.id,
             file_id=data["image_file_id"],
-            prompt=data["prompt"],
             duration=duration,
-            audio=data["audio"],
+            audio=False,
         )
     )
 
 
-async def _generate_and_send(bot, chat_id: int, file_id: str, prompt: str, duration: int, audio: bool):
+async def _generate_and_send(bot, chat_id: int, file_id: str, duration: int, audio: bool):
     try:
         tg_file = await bot.get_file(file_id)
         buf = BytesIO()
         await bot.download_file(tg_file.file_path, destination=buf)
         buf.seek(0)
 
-        # обход защиты seedance — накидываем сетку на изображение
+        # обход защиты seedance — накидываем сетку на изображение, изменил нейронку на minimax hailuo она не конфликтует с человеком на фото
         grid_buf = add_grid(buf, rows=15, cols=20, line_thickness=6)
 
         video_url = await create_video(
-            prompt=prompt,
-            image=grid_buf,
+            image=buf,
             duration=duration,
             audio=audio,
         )
