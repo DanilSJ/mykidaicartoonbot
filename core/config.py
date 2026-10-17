@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     TELEGRAM_TOKEN: str = os.getenv('TELEGRAM_TOKEN', default='None')
 
     AI_API_KEY: str = os.getenv('AI_API_KEY', default='None')
+    AI_API_WEBHOOK_URL: str = os.getenv('AI_API_WEBHOOK_URL', default='None')
 
     PLATEGA_BASE_URL: str = os.getenv('PLATEGA_BASE_URL', default='None')
     PLATEGA_MERCHANT_ID: str = os.getenv('PLATEGA_MERCHANT_ID', default='None')
