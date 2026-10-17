@@ -11,5 +11,12 @@ def start_keyboard() -> InlineKeyboardMarkup:
                     style="success"
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text="Политика конфиденциальности",
+                    callback_data=f"privacy_police",
+                    style="primary"
+                )
+            ],
         ]
     )
