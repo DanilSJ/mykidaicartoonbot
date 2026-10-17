@@ -21,10 +21,10 @@ async def cmd_video(message: Message, state: FSMContext):
     async with db_helper.scoped_session_dependency() as session:
         user = await get_user(session, message.from_user.id, message.from_user.username)
 
-        if user.request_count <= 0:
-            return await message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
-                                        reply_markup=buy_keyboard(),
-                                        )
+        # if user.request_count <= 0:
+        #     return await message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
+        #                                 reply_markup=buy_keyboard(),
+        #                                 )
     await state.set_state(Video.image)
     return await message.answer("Для того чтобы сгенерировать видео пришлите ОДНО изображение по которому будет происходить генерация")
 
@@ -33,10 +33,10 @@ async def callback_video(callback: CallbackQuery, state: FSMContext):
     async with db_helper.scoped_session_dependency() as session:
         user = await get_user(session, callback.from_user.id, callback.from_user.username)
 
-        if user.request_count <= 0:
-            return await callback.message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
-                                        reply_markup=buy_keyboard(),
-                                        )
+        # if user.request_count <= 0:
+        #     return await callback.message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
+        #                                 reply_markup=buy_keyboard(),
+        #                                 )
     await state.set_state(Video.image)
     return await callback.message.answer("Для того чтобы сгенерировать видео пришлите ОДНО изображение по которому будет происходить генерация")
 
