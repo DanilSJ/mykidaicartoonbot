@@ -11,10 +11,8 @@ class Tariff:
 
 # Тарифы: количество генераций -> цена
 TARIFFS: dict[int, Tariff] = {
-    10: Tariff(requests=10, price=99.0,  label="10 генераций"),
-    15: Tariff(requests=15, price=139.0, label="15 генераций"),
-    20: Tariff(requests=20, price=179.0, label="20 генераций"),
-    30: Tariff(requests=30, price=249.0, label="30 генераций"),
+    1: Tariff(requests=1, price=107.0,  label="5 секунд 107 рублей"),
+    2: Tariff(requests=1, price=187.0, label="15 секунд - 187 рублей"),
 }
 
 def buy_keyboard():
