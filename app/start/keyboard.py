@@ -18,5 +18,19 @@ def start_keyboard() -> InlineKeyboardMarkup:
                     style="primary"
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text="Пользовательское соглашение",
+                    callback_data=f"user_police",
+                    style="primary"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Техподдержка",
+                    callback_data=f"support_contact",
+                    style="primary"
+                )
+            ],
         ]
     )
