@@ -100,7 +100,7 @@ async def callback_privacy_police(callback: CallbackQuery):
     async with db_helper.scoped_session_dependency() as session:
         user = await get_user(session, callback.from_user.id, callback.from_user.username)
 
-    return await callback.message.answer("""
+    await callback.message.answer("""
 <i><u>17.10.2026</u></i>
 1. Общие положения
 
@@ -126,9 +126,9 @@ async def callback_privacy_police(callback: CallbackQuery):
 
 2.3. Пользователь осознаёт и соглашается, что ценность цифровых товаров и услуг Сервиса заключается в систематизации, анализе, форме подачи, сопровождении, поддержке и обновлениях, а не в эксклюзивности отдельных фрагментов информации.
 
-2.4. Сервис не заявляет и не гарантирует уникальность, исключительность или недоступность отдельных элементов материалов вне Сервиса.
-
- 
+2.4. Сервис не заявляет и не гарантирует уникальность, исключительность или недоступность отдельных элементов материалов вне Сервиса.""",
+                                         parse_mode="HTML",)
+    return await callback.message.answer("""
 
 3. Отказ от гарантий и ответственности
 
@@ -238,6 +238,7 @@ async def callback_privacy_police(callback: CallbackQuery):
 
 Используя Сервис (в том числе запуская бота и/или вводя команду /start), Пользователь подтверждает, что ознакомлен с настоящим Соглашением и принимает его условия в полном объёме.""",
                                          parse_mode="HTML",)
+
 
 @router.callback_query(F.data == "support_contact")
 async def callback_privacy_police(callback: CallbackQuery):
