@@ -27,6 +27,13 @@ def start_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
+                    text="Профиль",
+                    callback_data=f"profile",
+                    style="success"
+                )
+            ],
+            [
+                InlineKeyboardButton(
                     text="Политика конфиденциальности",
                     callback_data=f"privacy_police",
                     style="primary"
