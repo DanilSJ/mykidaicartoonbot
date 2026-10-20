@@ -6,7 +6,7 @@ from aiogram.types import Message, BufferedInputFile, CallbackQuery
 from app.payment.keyboard import buy_keyboard
 from app.utils import get_user, has_request_with_duration
 from app.video.ai import create_video
-from app.video.keyboard import duration_keyboard
+from app.video.keyboard import duration_keyboard, generate_keyboard
 from app.video.state import Video
 from io import BytesIO
 import httpx
@@ -129,6 +129,7 @@ async def _generate_and_send(bot, chat_id: int, file_id: str, duration: int, aud
             video=video_file,
             caption="Готово! 🎬",
             supports_streaming=True,
+            reply_markup=generate_keyboard()
         )
 
     except Exception as e:
