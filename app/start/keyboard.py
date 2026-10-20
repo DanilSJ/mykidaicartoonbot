@@ -13,6 +13,20 @@ def start_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
+                    text="Тарифы",
+                    callback_data=f"buy",
+                    style="success"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Реферальная программа",
+                    callback_data=f"referral",
+                    style="success"
+                )
+            ],
+            [
+                InlineKeyboardButton(
                     text="Политика конфиденциальности",
                     callback_data=f"privacy_police",
                     style="primary"
