@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.payment.keyboard import TARIFFS
 from app.payment.platega_client import PlategaError, platega_client
-from core.models import Payment, User
+from core.models import Payment, User, RequestCount
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +18,16 @@ class PaymentService:
         self,
         user: User,
         requests_count: int,
+        amount: float,
     ) -> Payment:
         tariff = TARIFFS.get(requests_count)
         if tariff is None:
             raise ValueError(f"Неизвестный тариф: {requests_count}")
 
         payment = Payment(
-            request_count=tariff.requests,
+            duration=tariff.duration,
             status="PENDING",
-            amount=tariff.price,
+            amount=amount,
             currency="RUB",
             user_id=user.id,
         )
@@ -35,7 +36,7 @@ class PaymentService:
 
         try:
             result = await platega_client.create_transaction(
-                amount=tariff.price,
+                amount=amount,
                 currency="RUB",
                 description=f"Покупка {tariff.label}",
                 return_url="PAYMENT_RETURN_URL",
@@ -86,17 +87,24 @@ class PaymentService:
 
         # Начисляем только при первом переходе в CONFIRMED
         if new_status == "CONFIRMED" and payment.status != "CONFIRMED":
-            await self.session.execute(
-                update(User)
-                .where(User.id == payment.user_id)
-                .values(request_count=User.request_count + payment.request_count)
+            request_row = RequestCount(
+                duration=payment.duration,
+                user_id=payment.user_id,
             )
-            logger.info(
-                "Начислено %s генераций user_id=%s (payment=%s)",
-                payment.request_count,
-                payment.user_id,
-                payment.id,
-            )
+            self.session.add(request_row)
+
+            query = select(User).where(User.id == payment.user_id)
+            result = await self.session.execute(query)
+            user = result.scalar_one_or_none()
+
+            if user:
+                if user.connect_referral_user:
+                    query = select(User).where(User.telegram_id == user.connect_referral_user)
+                    result = await self.session.execute(query)
+                    user_referral = result.scalar_one_or_none()
+
+                    if user_referral:
+                        user_referral.balance = user_referral.balance + 15
 
         payment.status = new_status
         await self.session.commit()
