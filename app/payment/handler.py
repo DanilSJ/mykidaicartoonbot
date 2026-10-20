@@ -1,5 +1,3 @@
-# app/payment/handlers.py
-
 import logging
 
 from aiogram import F, Router
@@ -48,16 +46,20 @@ async def btn_buy_request_count(callback: CallbackQuery):
         )
         service = PaymentService(session)
 
+        price = tariff.price
+        if user.balance:
+            price = tariff.price - user.balance
+
         try:
-            payment = await service.create_payment(user, requests_count)
+            payment = await service.create_payment(user, requests_count, price)
         except Exception:
             logger.exception("Ошибка создания платежа")
-            await callback.message.answer("Не удалось создать платёж. Попробуйте позже.")
+            await callback.message.answer("Сейчас сервис оплаты не доступен. Попробуйте позже.")
             return
 
         await callback.message.answer(
             f"💳 <b>{tariff.label}</b>\n"
-            f"Сумма: <b>{tariff.price:.0f} ₽</b>\n\n"
+            f"Сумма: <b>{price} ₽</b>\n\n"
             f"Оплатите по ссылке:\n{payment.payment_url}\n\n"
             f"После оплаты нажмите «Проверить оплату».",
             reply_markup=check_payment_keyboard(payment.id),
@@ -91,7 +93,7 @@ async def btn_check_payment(callback: CallbackQuery):
         if status == "CONFIRMED":
             await callback.message.edit_text(
                 f"✅ Оплата получена!\n"
-                f"Начислено <b>{payment.request_count}</b> генераций."
+                f"Начислена генерация."
             )
             await callback.answer("Готово!")
         elif status in ("CANCELED", "CHARGEBACKED"):
