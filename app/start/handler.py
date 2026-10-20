@@ -1,17 +1,24 @@
 from aiogram import Router, F
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, CommandObject
 from aiogram.types import Message, FSInputFile, CallbackQuery
 
 from app.start.keyboard import start_keyboard
 from app.utils import get_user
-from core.models import db_helper
+from core.models import db_helper, User
 
 router = Router()
 
 @router.message(CommandStart())
-async def cmd_start(message: Message):
+async def cmd_start(message: Message, command: CommandObject):
+    referrer_id = None
+
+    if command.args and command.args.isdigit():
+        candidate = int(command.args)
+        if candidate != message.from_user.id:
+            referrer_id = candidate
+
     async with db_helper.scoped_session_dependency() as session:
-        await get_user(session, message.from_user.id, message.from_user.username)
+        await get_user(session, message.from_user.id, message.from_user.username, referrer_id)
         video = FSInputFile("media/start.MOV")
         return await message.answer_video(video=video, caption="""🎬 Добро пожаловать в Kidai!
 
@@ -217,4 +224,12 @@ async def callback_privacy_police(callback: CallbackQuery):
         user = await get_user(session, callback.from_user.id, callback.from_user.username)
 
     return await callback.message.answer("Контакты техподдержки @stereotoha", parse_mode="HTML",)
+
+
+@router.callback_query(F.data == "referral")
+async def callback_referral(callback: CallbackQuery):
+    async with db_helper.scoped_session_dependency() as session:
+        user = await get_user(session, callback.from_user.id, callback.from_user.username)
+
+    return await callback.message.answer(f"Отправь эту ссылку другу и получи скидку https://t.me/mykidaicartoonbot?start={user.telegram_id}", parse_mode="HTML",)
 
