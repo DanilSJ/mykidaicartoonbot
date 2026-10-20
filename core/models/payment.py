@@ -4,7 +4,7 @@ from .base import Base
 
 
 class Payment(Base):
-    request_count: Mapped[int] = mapped_column(Integer)
+    duration: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String, default="PENDING")
     amount: Mapped[float] = mapped_column(Float, default=0.0)
     currency: Mapped[str] = mapped_column(String, default="RUB")
