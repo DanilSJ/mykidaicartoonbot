@@ -4,14 +4,13 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, BufferedInputFile, CallbackQuery
 from app.payment.keyboard import buy_keyboard
-from app.utils import get_user
+from app.utils import get_user, has_request_with_duration
 from app.video.ai import create_video
-from app.video.image import add_grid
 from app.video.keyboard import duration_keyboard
 from app.video.state import Video
 from io import BytesIO
 import httpx
-from core.models import db_helper
+from core.models import db_helper, User
 
 router = Router()
 
@@ -21,10 +20,14 @@ async def cmd_video(message: Message, state: FSMContext):
     async with db_helper.scoped_session_dependency() as session:
         user = await get_user(session, message.from_user.id, message.from_user.username)
 
-        # if user.request_count <= 0:
-        #     return await message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
-        #                                 reply_markup=buy_keyboard(),
-        #                                 )
+        has_5 = await has_request_with_duration(session, user.id, 5)
+        has_15 = await has_request_with_duration(session, user.id, 15)
+
+        if not has_5 and has_15:
+            return await message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
+                                        reply_markup=buy_keyboard(),
+                                        )
+
     await state.set_state(Video.image)
     return await message.answer("Для того чтобы сгенерировать видео пришлите ОДНО изображение по которому будет происходить генерация")
 
@@ -33,10 +36,13 @@ async def callback_video(callback: CallbackQuery, state: FSMContext):
     async with db_helper.scoped_session_dependency() as session:
         user = await get_user(session, callback.from_user.id, callback.from_user.username)
 
-        # if user.request_count <= 0:
-        #     return await callback.message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
-        #                                 reply_markup=buy_keyboard(),
-        #                                 )
+        has_5 = await has_request_with_duration(session, user.id, 5)
+        has_15 = await has_request_with_duration(session, user.id, 15)
+
+        if not has_5 and has_15:
+            return await callback.message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
+                                        reply_markup=buy_keyboard(),
+                                        )
     await state.set_state(Video.image)
     return await callback.message.answer("Для того чтобы сгенерировать видео пришлите ОДНО изображение по которому будет происходить генерация")
 
@@ -58,6 +64,19 @@ async def state_video_duration(message: Message, state: FSMContext):
 
     if duration not in (5, 15):
         return await message.answer("Выберите длительность видео: 5 или 15 секунд👾")
+    async with db_helper.scoped_session_dependency() as session:
+        user = await get_user(session, message.from_user.id, message.from_user.username)
+
+        has_5 = await has_request_with_duration(session, user.id, 5)
+        has_15 = await has_request_with_duration(session, user.id, 15)
+
+    if duration == 5:
+        if not has_5:
+            return await message.answer("У вас нет видео на 5 секунд выберите другую длительность👾", reply_markup=buy_keyboard())
+
+    if duration == 15:
+        if not has_15:
+            return await message.answer("У вас нет видео на 15 секунд выберите другую длительность или приобретите👾", reply_markup=buy_keyboard())
 
     data = await state.get_data()
     await state.clear()
@@ -83,7 +102,7 @@ async def _generate_and_send(bot, chat_id: int, file_id: str, duration: int, aud
         buf.seek(0)
 
         # обход защиты seedance — накидываем сетку на изображение, изменил нейронку на minimax hailuo она не конфликтует с человеком на фото
-        grid_buf = add_grid(buf, rows=15, cols=20, line_thickness=6)
+        # grid_buf = add_grid(buf, rows=15, cols=20, line_thickness=6)
 
         video_url = await create_video(
             image=buf,
