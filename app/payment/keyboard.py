@@ -9,8 +9,8 @@ class Tariff:
     label: str
 
 TARIFFS: dict[int, Tariff] = {
-    1: Tariff(duration=5, price=107.0,  label="5 секунд - 107 рублей"),
-    2: Tariff(duration=15, price=187.0, label="15 секунд - 187 рублей"),
+    1: Tariff(duration=5, price=119.0,  label="5 секунд - 119 рублей"),
+    2: Tariff(duration=15, price=219.0, label="15 секунд - 219 рублей"),
 }
 
 def buy_keyboard():
