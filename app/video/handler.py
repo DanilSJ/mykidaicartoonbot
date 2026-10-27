@@ -3,6 +3,8 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, BufferedInputFile, CallbackQuery
+from sqlalchemy import select
+
 from app.payment.keyboard import buy_keyboard
 from app.utils import get_user, has_request_with_duration
 from app.video.ai import create_video
@@ -10,10 +12,24 @@ from app.video.keyboard import duration_keyboard, generate_keyboard
 from app.video.state import Video
 from io import BytesIO
 import httpx
-from core.models import db_helper, User
+from core.models import db_helper, User, RequestCount, Base
 
 router = Router()
 
+
+@router.message(Command("test"))
+async def cmd_test(message: Message):
+    async with db_helper.scoped_session_dependency() as session:
+        user = await get_user(session, message.from_user.id, message.from_user.username)
+
+        request_row = RequestCount(
+                    duration=5,
+                    user_id=user.id,
+                )
+        session.add(request_row)
+
+        await session.commit()
+        await session.refresh(user)
 
 @router.message(Command("video"))
 async def cmd_video(message: Message, state: FSMContext):
