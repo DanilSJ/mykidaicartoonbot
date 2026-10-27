@@ -36,6 +36,8 @@ async def cmd_test(message: Message):
 
         await session.commit()
         await session.refresh(user)
+    return await message.answer("Выдано видео на 5 и 15 секунд")
+
 
 @router.message(Command("video"))
 async def cmd_video(message: Message, state: FSMContext):
