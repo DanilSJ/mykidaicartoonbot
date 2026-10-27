@@ -28,6 +28,12 @@ async def cmd_test(message: Message):
                 )
         session.add(request_row)
 
+        request_row = RequestCount(
+                    duration=15,
+                    user_id=user.id,
+                )
+        session.add(request_row)
+
         await session.commit()
         await session.refresh(user)
 
