@@ -36,9 +36,15 @@ def buy_request_count_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def check_payment_keyboard(payment_id: int) -> InlineKeyboardMarkup:
+def check_payment_keyboard(payment_id: int, payment_url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Оплатить",
+                    url=payment_url,
+                )
+            ],
             [
                 InlineKeyboardButton(
                     text="🔄 Проверить оплату",
