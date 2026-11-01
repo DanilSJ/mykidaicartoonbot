@@ -1,4 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
 
 def duration_keyboard() -> ReplyKeyboardMarkup:
@@ -12,12 +12,13 @@ def duration_keyboard() -> ReplyKeyboardMarkup:
         resize_keyboard=True,
     )
 
-def generate_keyboard() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[
+def generate_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
             [
-                KeyboardButton(text="Сгенерировать ещё", style="success"),
+                InlineKeyboardButton(text="Сгенерировать ещё",
+                                     callback_data="create_video",
+                                     style="success",),
             ],
         ],
-        resize_keyboard=True,
     )
