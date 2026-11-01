@@ -3,10 +3,8 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, BufferedInputFile, CallbackQuery
-from sqlalchemy import select
-
 from app.payment.keyboard import buy_keyboard
-from app.utils import get_user, has_request_with_duration
+from app.utils import get_user, has_request_with_duration, delete_one_request_count
 from app.video.ai import create_video
 from app.video.keyboard import duration_keyboard, generate_keyboard
 from app.video.state import Video
@@ -47,7 +45,7 @@ async def cmd_video(message: Message, state: FSMContext):
         has_5 = await has_request_with_duration(session, user.id, 5)
         has_15 = await has_request_with_duration(session, user.id, 15)
 
-        if not has_5 and has_15:
+        if not has_5 and not has_15:
             return await message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
                                         reply_markup=buy_keyboard(),
                                         )
@@ -63,7 +61,7 @@ async def callback_video(callback: CallbackQuery, state: FSMContext):
         has_5 = await has_request_with_duration(session, user.id, 5)
         has_15 = await has_request_with_duration(session, user.id, 15)
 
-        if not has_5 and has_15:
+        if not has_5 and not has_15:
             return await callback.message.answer("Вам необходимо приобрести генерации, для этого нажмите 'Купить'",
                                         reply_markup=buy_keyboard(),
                                         )
@@ -114,11 +112,13 @@ async def state_video_duration(message: Message, state: FSMContext):
             file_id=data["image_file_id"],
             duration=duration,
             audio=False,
+            user_telegram_id=message.from_user.id,
+            user_username=message.from_user.username
         )
     )
 
 
-async def _generate_and_send(bot, chat_id: int, file_id: str, duration: int, audio: bool):
+async def _generate_and_send(bot, chat_id: int, file_id: str, duration: int, audio: bool, user_telegram_id: int, user_username: str,):
     try:
         tg_file = await bot.get_file(file_id)
         buf = BytesIO()
@@ -148,13 +148,18 @@ async def _generate_and_send(bot, chat_id: int, file_id: str, duration: int, aud
             filename="video.mp4",
         )
 
-        return await bot.send_video(
+        await bot.send_video(
             chat_id=chat_id,
             video=video_file,
             caption="Готово! 🎬",
             supports_streaming=True,
             reply_markup=generate_keyboard()
         )
+
+        async with db_helper.scoped_session_dependency() as session:
+            user = await get_user(session, user_telegram_id, user_username)
+            return await delete_one_request_count(session, user.id, duration)
+
 
     except Exception as e:
         await bot.send_message(chat_id, f"Ошибка при генерации видео: {e}")
