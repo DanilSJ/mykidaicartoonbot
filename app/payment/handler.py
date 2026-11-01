@@ -2,8 +2,9 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
-from app.payment.keyboard import buy_request_count_keyboard, check_payment_keyboard, TARIFFS
+from app.payment.keyboard import buy_request_count_keyboard, check_payment_keyboard, TARIFFS, generate_video_keyboard
 from app.payment.service import PaymentService
+from app.start.keyboard import start_keyboard
 from app.utils import get_user
 from core.models import db_helper
 
@@ -81,11 +82,13 @@ async def btn_check_payment(callback: CallbackQuery):
 
         # уже подтверждён — не дёргаем API
         if payment.status == "CONFIRMED":
-            await callback.answer("Оплата уже подтверждена ✅", show_alert=True)
+            await callback.message.answer("Оплата уже подтверждена ✅",
+                reply_markup=generate_video_keyboard())
             return
 
         if payment.status in ("CANCELED", "CHARGEBACKED"):
-            await callback.answer("Платёж отменён ❌", show_alert=True)
+            await callback.message.answer("Платёж отменён ❌",
+                reply_markup=start_keyboard())
             return
 
         status = await service.sync_payment_status(payment)
@@ -93,11 +96,13 @@ async def btn_check_payment(callback: CallbackQuery):
         if status == "CONFIRMED":
             await callback.message.edit_text(
                 f"✅ Оплата получена!\n"
-                f"Начислена генерация."
+                f"Начислена генерация.",
+                reply_markup=generate_video_keyboard(),
             )
             await callback.answer("Готово!")
         elif status in ("CANCELED", "CHARGEBACKED"):
-            await callback.message.edit_text("❌ Платёж отклонён.")
+            await callback.message.edit_text("❌ Платёж отклонён.",
+                reply_markup=start_keyboard(),)
             await callback.answer()
         else:
             await callback.answer(
