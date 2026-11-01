@@ -53,3 +53,14 @@ def check_payment_keyboard(payment_id: int, payment_url: str) -> InlineKeyboardM
             ],
         ]
     )
+
+def generate_video_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Сгенерировать видео",
+                                     callback_data="create_video",
+                                     style="success",),
+            ],
+        ],
+    )
