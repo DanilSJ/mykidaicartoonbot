@@ -15,28 +15,6 @@ from core.models import db_helper, User, RequestCount, Base
 router = Router()
 
 
-@router.message(Command("test"))
-async def cmd_test(message: Message):
-    async with db_helper.scoped_session_dependency() as session:
-        user = await get_user(session, message.from_user.id, message.from_user.username)
-
-        request_row = RequestCount(
-                    duration=5,
-                    user_id=user.id,
-                )
-        session.add(request_row)
-
-        request_row = RequestCount(
-                    duration=15,
-                    user_id=user.id,
-                )
-        session.add(request_row)
-
-        await session.commit()
-        await session.refresh(user)
-    return await message.answer("Выдано видео на 5 и 15 секунд")
-
-
 @router.message(Command("video"))
 async def cmd_video(message: Message, state: FSMContext):
     async with db_helper.scoped_session_dependency() as session:
