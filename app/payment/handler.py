@@ -62,7 +62,7 @@ async def btn_buy_request_count(callback: CallbackQuery):
             f"Сумма: <b>{price} ₽</b>\n\n"
             f"Оплатите по ссылке:\n{payment.payment_url}\n\n"
             f"После оплаты нажмите «Проверить оплату».",
-            reply_markup=check_payment_keyboard(payment.id),
+            reply_markup=check_payment_keyboard(payment.id, payment.payment_url),
             disable_web_page_preview=True,
         )
 
