@@ -1,5 +1,5 @@
 from typing import Any
-from sqlalchemy import select, exists
+from sqlalchemy import select, exists, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from core.models import User, RequestCount
@@ -62,3 +62,27 @@ async def has_request_with_duration(session, user_id: int, duration: int) -> boo
     )
     result = await session.execute(query)
     return result.scalar()
+
+async def delete_one_request_count(
+    session: AsyncSession,
+    user_id: int,
+    duration: int,
+):
+    select_stmt = (
+        select(RequestCount.id)
+        .where(
+            RequestCount.user_id == user_id,
+            RequestCount.duration == duration,
+        )
+        .limit(1)
+    )
+    result = await session.execute(select_stmt)
+    row_id = result.scalar_one_or_none()
+
+    if row_id is None:
+        return 0
+
+    delete_stmt = delete(RequestCount).where(RequestCount.id == row_id)
+    result = await session.execute(delete_stmt)
+    await session.commit()
+    return result.rowcount
